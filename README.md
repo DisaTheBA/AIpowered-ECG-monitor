@@ -1,111 +1,93 @@
 AI-Powered ECG Monitoring System
+Project Overview
+This project describes the design and implementation of an edge-integrated Electrocardiogram (ECG) monitoring system. The system provides real-time detection of cardiac abnormalities, specifically focusing on Bradycardia and Tachycardia. By utilizing a 1D Convolutional Neural Network (1D-CNN), the system classifies heart rhythms into three categories based on a 10-second sliding window of cardiac data.
 
-Project Description
+System Architecture
+The system is organized into three specialized layers to ensure modularity and efficient data flow.
 
-This repository contains the source code and documentation for an edge-integrated Electrocardiogram (ECG) monitoring system. Developed as part of the Industrial Computing Design Project (FISA) at the Cape Peninsula University of Technology, the system is designed to provide real-time cardiac health tracking using a Raspberry Pi 5.
+Layer 1: Embedded Acquisition Layer
+The hardware interface responsible for capturing and digitizing the cardiac signal.
 
-The primary goal of the project is to classify heart rates into three distinct categories—Abnormally Low, Normal, and Abnormally High—using a custom 1D Convolutional Neural Network (CNN). By processing signals locally at the edge, the system offers an affordable solution for detecting conditions such as bradycardia and tachycardia without the need for high-latency cloud computing.
+AD8232 ECG Sensor: A single-lead sensor using three electrode pads (RA, LA, RL) for differential input. It includes integrated signal conditioning and a Right Leg Drive (RLD) circuit to minimize common-mode noise and power line interference.
 
-Hardware Specifications
+Arduino Uno Microcontroller: Serves as the data acquisition unit. It samples the analog signal at a strict rate of 250 Hz using hardware timer interrupts to ensure timing precision and avoid jitter.
 
-The hardware architecture focuses on precision data acquisition and local processing.
+Output: A digital stream of 10-bit ADC values transmitted via USB Serial.
 
-Component
+Layer 2: Communication and Control Layer
+The bridge between the embedded hardware and the computational host.
 
-Function
+USB Serial Connection: Provides the physical link for data transmission.
 
-Raspberry Pi 5
+Python Serial Library (pyserial): Manages asynchronous, non-blocking communication on the host side.
 
-Central processing unit for edge inference and system logic
+Bidirectional Feedback: This layer handles the transmission of raw ECG data to the laptop and sends encoded diagnostic commands (e.g., "Brady," "Normal," "Tachy") back to the Arduino to trigger physical alerts (LED/LCD).
 
-AD8232
+Layer 3: Host Processing and AI Inference Layer
+The high-performance computational core residing on a laptop.
 
-Analog front-end for ECG signal conditioning and acquisition
+Digital Signal Processing (DSP) Pipeline:
 
-ADS1115
+Bandpass Filtering: A third-order Butterworth filter (0.5 Hz - 40.0 Hz) removes baseline wander and high-frequency noise.
 
-16-bit Analog-to-Digital Converter (ADC) for I2C communication
+Resampling: Signals are resampled from 250 Hz (2500 samples) to 360 Hz (3600 samples) using linear interpolation to match the AI model's input requirements.
 
-16x2 I2C LCD
+Normalization: Applied via Z-score standardization.
 
-Visual interface for displaying real-time BPM and health status
+AI Inference Engine: A 1D-CNN trained using the MIT-BIH Arrhythmia Database. The model processes the 3600-sample segment to output probability distributions for the three cardiac classes.
 
-LED Indicators
+User Interface: Real-time visualization of the ECG waveform via Matplotlib and status updates via LED and LCD indicators.
 
-Physical alerts (Green: Normal status; Red: Heart rate abnormality)
+Methodology
+1. Data Understanding and Preparation
+The system utilizes the MIT-BIH Arrhythmia Database. Continuous signals were segmented into 10-second windows. Data augmentation and oversampling were employed to balance the classes and improve model generalization across underrepresented abnormalities.
 
-Pin Configuration
+2. Model Development
+Architecture: 1D-CNN selected for its effectiveness in time-series pattern recognition.
 
-The system utilizes the I2C protocol for communication between the ADC, the LCD, and the Raspberry Pi.
+Activation: Exponential Linear Unit (ELU) functions.
 
-SDA: GPIO 2 (Pin 3)
+Training: Developed using the PyTorch framework in a Google Colab environment and exported as an ecg_bpm_classifier.h5 file.
 
-SCL: GPIO 3 (Pin 5)
+3. Implementation and Integration
+Hardware Connection: * AD8232 OUTPUT to Arduino A0.
 
-Green LED: GPIO 17 (Pin 11)
+Electrodes placed at RA (Right chest), LA (Left chest), and RL (Right abdomen/RLD).
 
-Red LED: GPIO 27 (Pin 13)
+Software Environment: Developed using Arduino IDE (C++ firmware) and Visual Studio Code (Python processing scripts).
 
-Machine Learning Methodology
+Performance and Evaluation
+Accuracy: The 1D-CNN demonstrated an internal validation accuracy exceeding 90%.
 
-To ensure academic rigor and model accuracy, the system follows a structured machine learning pipeline.
+Latency: The end-to-end system latency, measured from buffer triggering to prediction, averaged 2.5 seconds (±0.3s), meeting the real-time requirement of <3.0 seconds.
 
-1. Data Acquisition and Automatic Labeling
+Robustness: The DSP pipeline effectively suppresses artifacts, and a Signal Quality Check is implemented to prevent false predictions during periods of extreme noise or lead-off.
 
-The model is trained on the MIT-BIH Arrhythmia Database. To handle large-scale datasets efficiently, a rule-based algorithm was implemented for automatic ground-truth generation:
-
-Signal Segmentation: Raw signals are divided into 10-second windows.
-
-Peak Detection: R-peaks are identified using scipy.signal.find_peaks.
-
-Label Assignment:
-
-0 (Low): < 60 BPM
-
-1 (Normal): 60 - 100 BPM
-
-2 (High): > 100 BPM
-
-2. CNN Architecture
-
-A lightweight 1D-CNN was designed to maintain high performance on the Raspberry Pi's hardware:
-
-Two Conv1D layers with 32 and 64 filters respectively.
-
-Batch Normalization and MaxPooling for feature stabilization and reduction.
-
-Dropout layers (0.3 - 0.4) to prevent overfitting during training.
-
-A Softmax output layer for 3-class probability distribution.
-
-Installation and Deployment
-
+Installation and Usage
 Prerequisites
+Arduino IDE for firmware deployment.
 
-Raspberry Pi OS (64-bit recommended)
+Python 3.x with the following libraries:
 
-Python 3.9+
+tensorflow / keras
 
-I2C interface enabled via raspi-config
+pyserial
 
-Software Setup
+numpy
 
-Clone the repository:
+scipy
 
-git clone [https://github.com/DisaTheBA/AIpowered-ECG-monitor)
-cd ai-ecg-monitor
+matplotlib
 
+Deployment
+Upload the provided Arduino C++ sketch to the Arduino Uno.
 
-Install the required Python libraries:
+Ensure the AD8232 electrodes are correctly placed on the user.
 
-pip install tensorflow wfdb scipy pandas matplotlib seaborn scikit-learn
+Connect the Arduino to the laptop via USB.
 
-
-Execute the training script (optional):
-
-python ecg_bpm_classifier.py
-
+Execute the Python application in the VS Code environment to begin real-time monitoring.
 
 Author
-
 Mandisa Shandu
+Student Number: 230522076
